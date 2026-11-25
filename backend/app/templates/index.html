@@ -3,1005 +3,2001 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gated Real-Time Auction Engine | Telemetry & Lua Atomic Validation</title>
+  <title>Real-Time Auction &amp; Bidding System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              gold: '#E5A93C',
-              goldLight: '#F5C76D',
-              neon: '#00F0FF',
-              emerald: '#10B981',
-              dark: '#08090C',
-              card: '#0F1117',
-              border: 'rgba(255, 255, 255, 0.08)',
-              borderActive: 'rgba(229, 169, 60, 0.4)',
-            }
-          },
-          fontFamily: {
-            sans: ['Plus Jakarta Sans', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          }
-        }
-      }
-    }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body {
-      background-color: #060709;
-      color: #E2E8F0;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      overflow-x: hidden;
-    }
-    .mono { font-family: 'JetBrains Mono', monospace; }
-    .glass-panel {
-      background: rgba(15, 17, 23, 0.75);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-    }
-    .glass-gold {
-      background: linear-gradient(135deg, rgba(229, 169, 60, 0.12) 0%, rgba(15, 17, 23, 0.8) 100%);
-      border: 1px solid rgba(229, 169, 60, 0.3);
-    }
-    .pulse-glow {
-      box-shadow: 0 0 25px rgba(229, 169, 60, 0.35);
-    }
-    .neon-glow {
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
-    }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #08090C; }
-    ::-webkit-scrollbar-thumb { background: #1E2330; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #E5A93C; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    @keyframes flashGreen {
-      0% { background-color: rgba(16, 185, 129, 0.4); }
-      100% { background-color: transparent; }
+    :root {
+      --blue: #0968F6;
+      --blue-dark: #0053C8;
+      --red: #E53238;
+      --yellow: #F5AF02;
+      --green: #86B817;
+      --dark: #191919;
+      --urgency: #E20020;
+      --white: #FFFFFF;
+      --surface: #F5F5F5;
+      --border: #E5E5E5;
+      --muted: #707070;
+      --text: #111111;
+      --radius: 4px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.12);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.18);
     }
-    .flash-accept {
-      animation: flashGreen 0.7s ease-out;
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.4;
+      min-height: 100vh;
+    }
+
+    /* ───────── UTILITY BAR ───────── */
+    .utility-bar {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 4px 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .utility-bar .inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .utility-bar a {
+      color: var(--muted);
+      text-decoration: none;
+      margin: 0 6px;
+    }
+    .utility-bar a:hover { text-decoration: underline; color: var(--text); }
+    .utility-bar .left a:first-child { margin-left: 0; }
+    .utility-bar .right { display: flex; align-items: center; gap: 2px; }
+    .utility-bar .icon-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--muted); font-size: 15px; padding: 2px 6px;
+    }
+    .utility-bar .icon-btn:hover { color: var(--text); }
+
+    /* ───────── MAIN HEADER ───────── */
+    .main-header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .header-top {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 16px 10px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      text-decoration: none;
+    }
+    .logo span:nth-child(1) { color: var(--red); }
+    .logo span:nth-child(2) { color: var(--blue); }
+    .logo span:nth-child(3) { color: var(--yellow); }
+    .logo span:nth-child(4) { color: var(--green); }
+    .logo span:nth-child(5) { color: var(--red); }
+    .logo span:nth-child(6) { color: var(--blue); }
+    .logo span:nth-child(7) { color: var(--blue); }
+
+    .search-bar {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      border: 2px solid var(--dark);
+      border-radius: 24px;
+      overflow: hidden;
+      max-width: 740px;
+      height: 40px;
+    }
+    .search-category {
+      background: var(--surface);
+      border: none;
+      border-right: 1px solid #ccc;
+      padding: 0 12px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+    .search-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 0 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--white);
+    }
+    .search-btn {
+      background: var(--blue);
+      border: none;
+      padding: 0 20px;
+      cursor: pointer;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      font-family: inherit;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .search-btn:hover { background: var(--blue-dark); }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .btn-sign-in {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .btn-sign-in:hover { border-color: #aaa; }
+
+    /* ───────── CATEGORY NAV ───────── */
+    .category-nav {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .category-nav::-webkit-scrollbar { display: none; }
+    .cat-link {
+      text-decoration: none;
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 14px;
+      white-space: nowrap;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: border-color 0.15s, color 0.15s;
+      font-weight: 500;
+    }
+    .cat-link:hover { border-bottom-color: var(--blue); color: var(--blue); }
+    .cat-link.active { border-bottom-color: var(--blue); color: var(--blue); }
+
+    /* ───────── HERO BANNER ───────── */
+    .hero {
+      background: var(--dark);
+      color: white;
+      padding: 20px 0;
+    }
+    .hero .inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .hero-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .live-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--urgency);
+      display: inline-block;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(226,0,32,0.5); }
+      50% { box-shadow: 0 0 0 7px rgba(226,0,32,0); }
+    }
+    .hero-title h2 { font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+    .hero-sub { font-size: 12px; color: #aaa; margin-top: 2px; }
+
+    .stats-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+      align-items: center;
+    }
+    .stat-item { text-align: center; }
+    .stat-val { font-size: 20px; font-weight: 700; color: var(--yellow); }
+    .stat-lbl { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ───────── CONTENT WRAPPER ───────── */
+    .content-wrapper {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 20px 16px;
+      display: flex;
+      gap: 20px;
+    }
+    .main-col { flex: 1; min-width: 0; }
+    .side-col {
+      width: 300px;
+      flex-shrink: 0;
+    }
+
+    /* ───────── FILTERS ROW ───────── */
+    .filters-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--text);
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+    }
+    .sort-select {
+      margin-left: auto;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      background: var(--white);
+    }
+
+    /* ───────── AUCTION GRID ───────── */
+    .auction-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .auction-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.15s;
+      position: relative;
+    }
+    .auction-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+    .auction-card:hover .card-bid-overlay { opacity: 1; }
+
+    .card-img-wrap {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .card-img-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s;
+    }
+    .auction-card:hover .card-img-wrap img { transform: scale(1.04); }
+
+    .card-condition {
+      position: absolute;
+      top: 8px; left: 8px;
+      background: rgba(0,0,0,0.65);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .card-fast-ending {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: var(--urgency);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      animation: blink 1.2s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+    .card-watchlist {
+      position: absolute;
+      bottom: 8px; right: 8px;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.15s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+    .card-watchlist:hover { transform: scale(1.15); }
+    .card-watchlist.active { color: var(--red); }
+
+    .card-bid-overlay {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(9,104,246,0.92);
+      color: white;
+      text-align: center;
+      padding: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      cursor: pointer;
+    }
+
+    .card-body { padding: 12px; }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .card-price {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    .card-price-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .card-timer { font-weight: 600; color: var(--text); }
+    .card-timer.urgent { color: var(--urgency); }
+    .card-bids { font-size: 11px; }
+    .card-watching { font-size: 11px; color: var(--muted); }
+
+    /* ───────── LOAD MORE ───────── */
+    .load-more-wrap { text-align: center; margin-top: 24px; }
+    .btn-load-more {
+      border: 2px solid var(--blue);
+      background: none;
+      color: var(--blue);
+      padding: 10px 32px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn-load-more:hover { background: var(--blue); color: white; }
+
+    /* ───────── SIDEBAR ───────── */
+    .sidebar-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .live-badge {
+      background: var(--urgency);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    /* Live Feed */
+    #live-feed {
+      max-height: 320px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scrollbar-width: thin;
+    }
+    .feed-entry {
+      background: var(--surface);
+      border-left: 3px solid var(--blue);
+      border-radius: 0 4px 4px 0;
+      padding: 8px 10px;
+      font-size: 12px;
+      animation: slideIn 0.35s ease-out;
+    }
+    .feed-entry.new-bid { border-left-color: var(--green); }
+    .feed-entry.outbid { border-left-color: var(--yellow); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .feed-time { color: var(--muted); font-size: 10px; }
+    .feed-amount { font-weight: 700; color: var(--blue); }
+
+    /* Sell Form */
+    .sell-form input,
+    .sell-form select,
+    .sell-form textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 8px;
+      background: var(--white);
+      color: var(--text);
+      transition: border-color 0.15s;
+    }
+    .sell-form input:focus,
+    .sell-form select:focus,
+    .sell-form textarea:focus { border-color: var(--blue); }
+    .sell-form label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 2px; }
+    .sell-form textarea { resize: vertical; min-height: 60px; }
+    .btn-list-item {
+      width: 100%;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-list-item:hover { background: var(--blue-dark); }
+
+    /* ───────── DETAIL PANEL ───────── */
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .detail-overlay.open { display: flex; }
+    .detail-modal {
+      background: var(--white);
+      border-radius: 12px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      box-shadow: var(--shadow-lg);
+    }
+    .detail-close {
+      position: sticky;
+      top: 12px;
+      left: calc(100% - 48px);
+      float: right;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 36px; height: 36px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+      margin: 12px 12px 0 0;
+    }
+    .detail-left {
+      padding: 20px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .detail-main-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .detail-img-wrap { position: relative; }
+    .viewed-pill {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: var(--urgency);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+    .thumb-row {
+      display: flex;
+      gap: 8px;
+    }
+    .thumb {
+      width: 60px; height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .thumb:hover, .thumb.active { border-color: var(--blue); }
+    .detail-img-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .detail-right { padding: 20px 24px; }
+    .detail-title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+    .seller-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .seller-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .seller-name { font-weight: 600; font-size: 13px; }
+    .seller-rating { font-size: 12px; color: var(--muted); }
+    .seller-msg {
+      margin-left: auto;
+      color: var(--blue);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .seller-msg:hover { text-decoration: underline; }
+
+    .bid-section { margin-bottom: 16px; }
+    .current-bid-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .current-bid-price { font-size: 32px; font-weight: 800; color: var(--text); line-height: 1.1; }
+    .bid-count-link { font-size: 13px; color: var(--blue); cursor: pointer; }
+    .bid-count-link:hover { text-decoration: underline; }
+    .countdown-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .countdown-label { color: var(--muted); }
+    .countdown-val { font-weight: 700; color: var(--text); }
+    .countdown-val.urgent { color: var(--urgency); }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+      margin-bottom: 16px;
+      padding: 12px;
+      background: var(--surface);
+      border-radius: 6px;
+    }
+    .spec-row { font-size: 12px; }
+    .spec-key { color: var(--muted); }
+    .spec-val { font-weight: 600; color: var(--text); }
+
+    .btn-place-bid {
+      width: 100%;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      margin-bottom: 10px;
+    }
+    .btn-place-bid:hover { background: var(--blue-dark); }
+    .btn-watchlist-outline {
+      width: 100%;
+      background: none;
+      border: 2px solid var(--border);
+      border-radius: 24px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--text);
+      transition: border-color 0.15s;
+      margin-bottom: 14px;
+    }
+    .btn-watchlist-outline:hover { border-color: var(--blue); color: var(--blue); }
+
+    .social-proof { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .shipping-row { font-size: 13px; margin-bottom: 6px; }
+    .trust-row {
+      font-size: 13px;
+      color: var(--green);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ───────── BID MODAL ───────── */
+    .bid-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .bid-modal-overlay.open { display: flex; }
+    .bid-modal {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+    .bid-modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .bid-modal .current-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .bid-modal .current-price-row strong { font-size: 20px; }
+    .bid-modal label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+    .bid-input-wrap {
+      display: flex;
+      align-items: center;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+    .bid-input-wrap:focus-within { border-color: var(--blue); }
+    .bid-currency {
+      background: var(--surface);
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 16px;
+      border-right: 1px solid var(--border);
+      color: var(--muted);
+    }
+    #bid-amount-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 10px 12px;
+      font-size: 16px;
+      font-family: inherit;
+      font-weight: 600;
+    }
+    .bid-error {
+      color: var(--urgency);
+      font-size: 12px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .bid-error.visible { display: block; }
+    .bid-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+      border-radius: 20px;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .bid-success.visible { display: block; }
+    .btn-confirm-bid {
+      width: 100%;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      margin-bottom: 8px;
+    }
+    .btn-confirm-bid:hover { background: var(--blue-dark); }
+    .btn-cancel-bid {
+      width: 100%;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--muted);
+      transition: border-color 0.15s;
+    }
+    .btn-cancel-bid:hover { border-color: #aaa; color: var(--text); }
+
+    /* ───────── AUTH MODAL ───────── */
+    .auth-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 400;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .auth-overlay.open { display: flex; }
+    .auth-modal {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+    .auth-modal h3 { font-size: 20px; font-weight: 700; margin-bottom: 20px; text-align: center; }
+    .auth-tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+    .auth-tab {
+      flex: 1; padding: 10px; text-align: center;
+      cursor: pointer; font-weight: 600; font-size: 14px;
+      color: var(--muted); border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: all 0.15s;
+    }
+    .auth-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .auth-form input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      margin-bottom: 10px;
+      transition: border-color 0.15s;
+    }
+    .auth-form input:focus { border-color: var(--blue); }
+    .btn-auth-submit {
+      width: 100%;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      margin-top: 4px;
+    }
+    .btn-auth-submit:hover { background: var(--blue-dark); }
+    .auth-msg { text-align: center; margin-top: 10px; font-size: 13px; }
+    .auth-error { color: var(--urgency); font-size: 12px; margin-bottom: 8px; display: none; }
+    .auth-error.visible { display: block; }
+    .auth-close {
+      float: right;
+      background: none; border: none;
+      font-size: 20px; cursor: pointer; color: var(--muted);
+    }
+
+    /* ───────── USER PILL ───────── */
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .user-pill:hover { border-color: #aaa; }
+    .user-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    /* ───────── SKELETON ───────── */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .sk-card { background: var(--white); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .sk-img { width: 100%; aspect-ratio: 1; }
+    .sk-body { padding: 12px; }
+    .sk-line { height: 12px; margin-bottom: 8px; }
+    .sk-line.short { width: 60%; }
+    .sk-price { height: 18px; width: 40%; margin-bottom: 8px; }
+
+    /* ───────── TOAST ───────── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: var(--dark);
+      color: white;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.7s forwards;
+      max-width: 320px;
+    }
+    .toast.success { border-left: 4px solid var(--green); }
+    .toast.error { border-left: 4px solid var(--urgency); }
+    .toast.info { border-left: 4px solid var(--blue); }
+    @keyframes toastIn { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: none; } }
+    @keyframes toastOut { to { opacity:0; transform: translateY(16px); } }
+
+    /* ───────── EMPTY STATE ───────── */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    /* ───────── RESPONSIVE ───────── */
+    @media (max-width: 900px) {
+      .content-wrapper { flex-direction: column; }
+      .side-col { width: 100%; }
+      .detail-modal { grid-template-columns: 1fr; }
+      .detail-left { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+    @media (max-width: 600px) {
+      .header-top { flex-wrap: wrap; }
+      .search-bar { order: 3; width: 100%; max-width: 100%; }
+      .hero-title h2 { font-size: 16px; }
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-brand-gold selection:text-black">
+<body>
 
-  <!-- ====================================================================== -->
-  <!-- TOP TELEMETRY HUD BAR                                                  -->
-  <!-- ====================================================================== -->
-  <header class="sticky top-0 z-50 glass-panel border-b border-brand-border px-4 py-3">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-      
-      <!-- Logo & System Status -->
-      <div class="flex items-center gap-3">
-        <div class="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-brand-gold/30 to-amber-950/40 border border-brand-gold/40 text-brand-gold font-bold">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-          <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
-          <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-emerald-500"></span>
+<!-- ============================================================ -->
+<!--  TOP UTILITY BAR                                             -->
+<!-- ============================================================ -->
+<div class="utility-bar">
+  <div class="inner">
+    <div class="left">
+      <a href="#">Hi! <span id="util-username">Sign in or register</span></a>
+      <a href="#">Daily Deals</a>
+      <a href="#">Brand Outlet</a>
+      <a href="#">Help &amp; Contact</a>
+    </div>
+    <div class="right">
+      <a href="#" onclick="openSellTab();return false;">Sell</a>
+      <a href="#">Watchlist ▾</a>
+      <a href="#" id="util-account-link" onclick="handleAccountClick();return false;">My Account ▾</a>
+      <button class="icon-btn" title="Notifications">🔔</button>
+      <button class="icon-btn" title="Cart">🛒</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!--  MAIN HEADER                                                 -->
+<!-- ============================================================ -->
+<div class="main-header">
+  <div class="header-top">
+    <!-- Logo -->
+    <a class="logo" href="javascript:void(0)" onclick="showGrid()">
+      <span>R</span><span>e</span><span>a</span><span>l</span><span>-</span><span>T</span><span>i</span><span>m</span><span>e</span>
+    </a>
+
+    <!-- Search bar -->
+    <div class="search-bar">
+      <select class="search-category" id="search-cat">
+        <option>All Categories</option>
+        <option>Electronics</option>
+        <option>Watches</option>
+        <option>Art &amp; Collectibles</option>
+        <option>Sports</option>
+        <option>Jewelry</option>
+        <option>Vehicles</option>
+      </select>
+      <input class="search-input" type="text" id="search-input" placeholder="Search for anything" autocomplete="off">
+      <button class="search-btn" onclick="doSearch()">Search</button>
+    </div>
+
+    <!-- Auth / User -->
+    <div class="header-actions">
+      <div id="auth-signed-out" style="">
+        <button class="btn-sign-in" onclick="openAuth()">Sign in</button>
+      </div>
+      <div id="auth-signed-in" style="display:none;">
+        <div class="user-pill" onclick="handleSignOut()">
+          <div class="user-dot"></div>
+          <span id="header-username">User</span>
+          <span style="color:var(--muted);font-size:11px;">Sign out</span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category strip -->
+  <nav class="category-nav">
+    <a class="cat-link active" onclick="filterCat('')" href="javascript:void(0)">Featured Auctions</a>
+    <a class="cat-link" onclick="filterCat('ending-soon')" href="javascript:void(0)">Ending Soon</a>
+    <a class="cat-link" onclick="filterCat('Electronics')" href="javascript:void(0)">Electronics</a>
+    <a class="cat-link" onclick="filterCat('Watches')" href="javascript:void(0)">Watches</a>
+    <a class="cat-link" onclick="filterCat('Art')" href="javascript:void(0)">Art &amp; Collectibles</a>
+    <a class="cat-link" onclick="filterCat('Sports')" href="javascript:void(0)">Sports</a>
+    <a class="cat-link" onclick="filterCat('Jewelry')" href="javascript:void(0)">Jewelry</a>
+    <a class="cat-link" onclick="filterCat('Vehicles')" href="javascript:void(0)">Vehicles</a>
+  </nav>
+</div>
+
+<!-- ============================================================ -->
+<!--  HERO BANNER                                                 -->
+<!-- ============================================================ -->
+<div class="hero">
+  <div class="inner">
+    <div>
+      <div class="hero-title">
+        <span class="live-dot"></span>
+        <h2>LIVE AUCTIONS</h2>
+      </div>
+      <div class="hero-sub">Real-time bidding powered by Redis WebSockets &amp; Lua atomic validation</div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-val" id="stat-total">—</div>
+        <div class="stat-lbl">Total Auctions</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="stat-active">—</div>
+        <div class="stat-lbl">Active Bids</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="stat-ending">—</div>
+        <div class="stat-lbl">Ending in &lt;1hr</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="stat-value">—</div>
+        <div class="stat-lbl">Total Value</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!--  CONTENT AREA                                               -->
+<!-- ============================================================ -->
+<div class="content-wrapper">
+
+  <!-- Main column -->
+  <div class="main-col">
+
+    <!-- Filters row -->
+    <div class="filters-row">
+      <button class="filter-chip active" onclick="setFilter('all', this)">All Items</button>
+      <button class="filter-chip" onclick="setFilter('active', this)">Active</button>
+      <button class="filter-chip" onclick="setFilter('ending', this)">Ending Soon</button>
+      <button class="filter-chip" onclick="setFilter('new', this)">New Listings</button>
+      <select class="sort-select" onchange="sortAuctions(this.value)">
+        <option value="newest">Newest First</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="price-desc">Price: High to Low</option>
+        <option value="ending">Ending Soonest</option>
+        <option value="bids">Most Bids</option>
+      </select>
+    </div>
+
+    <!-- Grid -->
+    <div class="auction-grid" id="auction-grid">
+      <!-- skeleton -->
+      <div class="sk-card" id="sk1"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-price"></div></div></div>
+      <div class="sk-card" id="sk2"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-price"></div></div></div>
+      <div class="sk-card" id="sk3"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-price"></div></div></div>
+      <div class="sk-card" id="sk4"><div class="skeleton sk-img"></div><div class="sk-body"><div class="skeleton sk-line"></div><div class="skeleton sk-line short"></div><div class="skeleton sk-price"></div></div></div>
+    </div>
+
+    <div class="load-more-wrap" id="load-more-wrap" style="display:none;">
+      <button class="btn-load-more" onclick="loadMore()">View More</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="side-col">
+
+    <!-- Live Bid Feed -->
+    <div class="sidebar-card">
+      <div class="sidebar-title">
+        Live Bid Feed
+        <span class="live-badge">LIVE</span>
+      </div>
+      <div id="live-feed">
+        <div class="feed-entry" style="color:var(--muted);font-size:12px;">Connecting to live feed…</div>
+      </div>
+    </div>
+
+    <!-- Sell a tab -->
+    <div class="sidebar-card">
+      <div class="sidebar-title" id="sell-tab-title">Sell an Item</div>
+      <form class="sell-form" onsubmit="listItem(event)">
+        <label>Item Title</label>
+        <input type="text" id="sell-title" placeholder="e.g. Vintage Rolex Submariner" required>
+        <label>Description</label>
+        <textarea id="sell-desc" placeholder="Describe your item…"></textarea>
+        <label>Category</label>
+        <select id="sell-cat">
+          <option>Electronics</option>
+          <option>Watches</option>
+          <option>Art &amp; Collectibles</option>
+          <option>Sports</option>
+          <option>Jewelry</option>
+          <option>Vehicles</option>
+          <option>Other</option>
+        </select>
+        <label>Starting Price (₹)</label>
+        <input type="number" id="sell-start" placeholder="5000" min="1" required>
+        <label>Reserve Price (₹)</label>
+        <input type="number" id="sell-reserve" placeholder="8000" min="1">
+        <label>Duration</label>
+        <select id="sell-duration">
+          <option value="1">1 Day</option>
+          <option value="3" selected>3 Days</option>
+          <option value="7">7 Days</option>
+        </select>
+        <label>Image URL (optional)</label>
+        <input type="url" id="sell-image" placeholder="https://…">
+        <button type="submit" class="btn-list-item">List Item →</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!--  ITEM DETAIL OVERLAY                                        -->
+<!-- ============================================================ -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetailIfBg(event)">
+  <div class="detail-modal" id="detail-modal">
+    <button class="detail-close" onclick="closeDetail()">×</button>
+
+    <!-- Left: images -->
+    <div class="detail-left">
+      <div class="detail-img-wrap">
+        <img id="detail-main-img" class="detail-main-img" src="" alt="">
+        <div class="viewed-pill" id="detail-viewed">— VIEWED TODAY</div>
+      </div>
+      <div class="thumb-row" id="thumb-row">
+        <!-- thumbnails injected by JS -->
+      </div>
+      <div class="detail-img-actions">
+        <span>🔍 Zoom</span>
+        <span>♡ <span id="detail-watching-sm">—</span> watching</span>
+      </div>
+    </div>
+
+    <!-- Right: buy-box -->
+    <div class="detail-right">
+      <h2 class="detail-title" id="detail-title">—</h2>
+
+      <div class="seller-row">
+        <div class="seller-avatar" id="detail-avatar">S</div>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-base font-extrabold tracking-wide uppercase text-white">Gated Auction Engine</h1>
-            <span class="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded bg-brand-gold/20 text-brand-gold border border-brand-gold/30">v1.0 LUA CORE</span>
-          </div>
-          <p class="text-xs text-slate-400 mono flex items-center gap-2">
-            <span id="backend-status-pill" class="inline-flex items-center gap-1 text-emerald-400">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> WebSocket Live
-            </span>
-            <span class="text-slate-600">|</span>
-            <span id="telemetry-clients-count" title="Per-process active WebSocket connections managed by this server instance">0 Clients Connected (Process)</span>
-          </p>
+          <div class="seller-name" id="detail-seller-name">Seller</div>
+          <div class="seller-rating" id="detail-seller-rating">(— feedback)</div>
         </div>
+        <a class="seller-msg" href="#">Message</a>
       </div>
 
-      <!-- Real-Time Latency & Throughput Telemetry Badges -->
-      <div class="flex items-center gap-2 sm:gap-4 mono text-xs">
-        <div class="px-3 py-1.5 rounded-lg bg-black/40 border border-brand-border">
-          <span class="text-[10px] uppercase tracking-wider text-slate-500 block">P50 Latency</span>
-          <span id="stat-p50" class="text-emerald-400 font-semibold">1.12 ms</span>
-        </div>
-        <div class="px-3 py-1.5 rounded-lg bg-black/40 border border-brand-border">
-          <span class="text-[10px] uppercase tracking-wider text-slate-500 block">P99 Latency</span>
-          <span id="stat-p99" class="text-brand-neon font-semibold">3.18 ms</span>
-        </div>
-        <div class="px-3 py-1.5 rounded-lg bg-black/40 border border-brand-border">
-          <span class="text-[10px] uppercase tracking-wider text-slate-500 block">Throughput</span>
-          <span id="stat-rps" class="text-brand-gold font-semibold">142 bids/s</span>
-        </div>
-        <div class="px-3 py-1.5 rounded-lg bg-black/40 border border-brand-border hidden md:block">
-          <span class="text-[10px] uppercase tracking-wider text-slate-500 block">Processed Bids</span>
-          <span id="stat-total-bids" class="text-slate-200 font-semibold">54,291</span>
-        </div>
+      <div class="bid-section">
+        <div class="current-bid-label">Current Bid</div>
+        <div class="current-bid-price" id="detail-price">₹—</div>
+        <div><span class="bid-count-link" id="detail-bid-count">— bids</span></div>
       </div>
 
-      <!-- User Gated Escrow Identity Badge -->
-      <div class="flex items-center gap-3">
-        <div class="hidden lg:flex flex-col text-right">
-          <div class="flex items-center gap-1.5 justify-end">
-            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-            <span id="user-tier" class="text-xs font-bold text-amber-300 uppercase tracking-wider">VIP DIAMOND</span>
-          </div>
-          <span class="text-xs text-slate-400 mono">
-            Collateral: <strong id="user-escrow-balance" class="text-white">$750,000.00</strong>
-          </span>
-        </div>
-        <button id="deposit-btn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition text-slate-200 flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5 text-brand-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-          Deposit
-        </button>
-        <button id="sound-toggle-btn" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition text-slate-300" title="Toggle Sound FX">
-          <span id="sound-icon">🔊</span>
-        </button>
+      <div class="countdown-row">
+        <span class="countdown-label">Ends in</span>
+        <span class="countdown-val" id="detail-countdown">—</span>
       </div>
 
-    </div>
-  </header>
-
-  <!-- ====================================================================== -->
-  <!-- MAIN ARENA CONTENT                                                     -->
-  <!-- ====================================================================== -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6">
-
-    <!-- Anti-Sniping Soft Close Alert Banner (Dynamically shown) -->
-    <div id="sniping-alert" class="hidden p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs sm:text-sm font-medium flex items-center justify-between transition-all duration-300">
-      <div class="flex items-center gap-2">
-        <span class="flex h-3 w-3 relative">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-        </span>
-        <span>⚡ <strong>ANTI-SNIPING TRIGGERED:</strong> High-frequency bid detected in final 15s window. Timer extended by <strong>+30 seconds</strong>!</span>
-      </div>
-      <span class="mono text-xs opacity-75">Atomic Lua Soft-Close</span>
-    </div>
-
-    <!-- Lot Selector Carousel -->
-    <div class="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
-      <button onclick="selectAuction('auc_shelby_gt500')" id="tab-auc_shelby_gt500" class="lot-tab px-4 py-2.5 rounded-xl border text-left flex items-center gap-3 min-w-[260px] glass-gold transition-all">
-        <span class="text-xl">🏎️</span>
-        <div>
-          <div class="text-xs uppercase font-bold text-white tracking-wide">1967 Shelby GT500</div>
-          <div class="text-[11px] mono text-brand-gold" id="tab-price-auc_shelby_gt500">$145,000.00</div>
-        </div>
-      </button>
-
-      <button onclick="selectAuction('auc_patek_6300g')" id="tab-auc_patek_6300g" class="lot-tab px-4 py-2.5 rounded-xl border border-brand-border text-left flex items-center gap-3 min-w-[260px] glass-panel hover:border-slate-600 transition-all">
-        <span class="text-xl">⌚</span>
-        <div>
-          <div class="text-xs uppercase font-bold text-slate-300 tracking-wide">Patek Philippe 6300G</div>
-          <div class="text-[11px] mono text-slate-400" id="tab-price-auc_patek_6300g">$235,000.00</div>
-        </div>
-      </button>
-
-      <button onclick="selectAuction('auc_ferrari_f40_lm')" id="tab-auc_ferrari_f40_lm" class="lot-tab px-4 py-2.5 rounded-xl border border-brand-border text-left flex items-center gap-3 min-w-[260px] glass-panel hover:border-slate-600 transition-all">
-        <span class="text-xl">🏁</span>
-        <div>
-          <div class="text-xs uppercase font-bold text-slate-300 tracking-wide">1989 Ferrari F40 LM</div>
-          <div class="text-[11px] mono text-slate-400" id="tab-price-auc_ferrari_f40_lm">$390,000.00</div>
-        </div>
-      </button>
-
-      <button onclick="selectAuction('auc_carbon_credit_blk')" id="tab-auc_carbon_credit_blk" class="lot-tab px-4 py-2.5 rounded-xl border border-brand-border text-left flex items-center gap-3 min-w-[260px] glass-panel hover:border-slate-600 transition-all">
-        <span class="text-xl">🌲</span>
-        <div>
-          <div class="text-xs uppercase font-bold text-slate-300 tracking-wide">50k Carbon Units</div>
-          <div class="text-[11px] mono text-slate-400" id="tab-price-auc_carbon_credit_blk">$82,500.00</div>
-        </div>
-      </button>
-    </div>
-
-    <!-- Core Grid: Left = Active Auction Arena | Right = Live Waterfall & Lua Inspector -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-      <!-- ================================================================ -->
-      <!-- LEFT LOT CARD & BID CONSOLE (7 Columns)                          -->
-      <!-- ================================================================ -->
-      <div class="lg:col-span-7 flex flex-col gap-6">
-
-        <!-- Active Lot Hero Card -->
-        <div class="glass-panel rounded-2xl p-5 sm:p-7 relative overflow-hidden border border-brand-border">
-          <div class="absolute top-0 right-0 w-80 h-80 bg-brand-gold/10 rounded-full blur-3xl pointer-events-none"></div>
-
-          <!-- Lot Details Header -->
-          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <span id="lot-category" class="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded-md bg-white/5 border border-white/10 text-brand-gold">
-              Exotic Automobilia
-            </span>
-            <div class="flex items-center gap-2">
-              <span id="reserve-badge" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Reserve Met
-              </span>
-              <span id="gated-pass-badge" class="px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z" clip-rule="evenodd"/></svg>
-                Escrow Gated
-              </span>
-            </div>
-          </div>
-
-          <h2 id="lot-title" class="text-xl sm:text-2xl font-black tracking-tight text-white mb-2">
-            1967 Shelby GT500 Super Snake (1 of 1 Experimental 427 CI)
-          </h2>
-          <p id="lot-desc" class="text-xs sm:text-sm text-slate-400 font-light leading-relaxed mb-6">
-            Original prototype commissioned for Goodyear Thunderbolt high-speed tire tests. Powered by Carroll Shelby 427 FE medium-riser V8 generating 520HP. 4-speed manual top-loader. Verified provenance, Registry Certificate #001.
-          </p>
-
-          <!-- Current Bid & Countdown Banner -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-xl bg-black/50 border border-brand-border mb-6">
-            <div>
-              <span class="text-xs text-slate-400 uppercase tracking-wider block mb-1">Current High Bid</span>
-              <div id="lot-current-price" class="text-3xl sm:text-4xl font-extrabold mono text-brand-gold tracking-tight">
-                $145,000.00
-              </div>
-              <div class="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                <span>Leader:</span>
-                <strong id="lot-highest-bidder" class="text-white mono">apex_collector</strong>
-                <span class="text-slate-600">•</span>
-                <span id="lot-seq-badge" class="text-slate-400 mono">Seq #18</span>
-              </div>
-            </div>
-
-            <div class="sm:text-right flex flex-col sm:items-end justify-between">
-              <div>
-                <span class="text-xs text-slate-400 uppercase tracking-wider block mb-1">Live Auction Clock</span>
-                <div id="lot-countdown" class="text-3xl sm:text-4xl font-extrabold mono text-white tracking-tight">
-                  24:48
-                </div>
-              </div>
-              <div class="text-[11px] text-slate-500 mono mt-2">
-                Min Increment: <strong id="lot-min-increment" class="text-slate-300">+$2,500.00</strong>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Bid Buttons & Custom Input -->
-          <div class="flex flex-col gap-3">
-            <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Place Atomic Bid</label>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <button onclick="placeQuickBid(2500)" class="py-2.5 px-3 rounded-xl bg-brand-gold hover:bg-brand-goldLight text-black font-bold text-xs mono transition shadow-lg shadow-brand-gold/20 flex flex-col items-center">
-                <span>+$2,500</span>
-                <span class="text-[9px] font-normal uppercase opacity-75">Min Step</span>
-              </button>
-              <button onclick="placeQuickBid(5000)" class="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs mono transition border border-white/10 flex flex-col items-center">
-                <span>+$5,000</span>
-                <span class="text-[9px] font-normal uppercase text-slate-400">Power Step</span>
-              </button>
-              <button onclick="placeQuickBid(10000)" class="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs mono transition border border-white/10 flex flex-col items-center">
-                <span>+$10,000</span>
-                <span class="text-[9px] font-normal uppercase text-slate-400">Aggressive</span>
-              </button>
-              <button onclick="placeQuickBid(25000)" class="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs mono transition border border-white/10 flex flex-col items-center">
-                <span>+$25,000</span>
-                <span class="text-[9px] font-normal uppercase text-slate-400">VIP Whale</span>
-              </button>
-            </div>
-
-            <!-- Custom Bid Input & Actions -->
-            <div class="flex gap-2 mt-2">
-              <div class="relative flex-1">
-                <span class="absolute inset-y-0 left-3 flex items-center text-slate-500 mono font-semibold">$</span>
-                <input id="custom-bid-input" type="number" placeholder="Enter custom bid amount" class="w-full pl-8 pr-4 py-2.5 rounded-xl bg-black/60 border border-brand-border text-white mono text-sm focus:outline-none focus:border-brand-gold transition">
-              </div>
-              <button onclick="placeCustomBid()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-500/20">
-                Bid Now
-              </button>
-              <button onclick="resetCurrentAuction()" class="px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white text-xs mono transition" title="Reset Auction for Demonstration">
-                Reset
-              </button>
-            </div>
-            
-            <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-              <span>Required Collateral Lock: <strong id="lot-required-collateral" class="text-amber-300">$15,000.00</strong></span>
-              <span id="bid-status-msg" class="mono text-emerald-400 font-medium">Ready</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- High-Concurrency Stress Test Control Deck -->
-        <div class="glass-panel rounded-2xl p-5 border border-brand-border">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="text-base">⚡</span>
-              <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-white">Concurrency Attack Simulator</h3>
-            </div>
-            <span class="px-2 py-0.5 text-[10px] mono uppercase rounded bg-brand-neon/10 text-brand-neon border border-brand-neon/30">Zero Race Conditions</span>
-          </div>
-          <p class="text-xs text-slate-400 mb-4">
-            Simulate concurrent automated trading bots hammering this auction room simultaneously. Tests Redis Lua script atomicity, sequence number monotonicity, and sub-millisecond Pub/Sub fanout.
-          </p>
-          <div class="flex flex-wrap items-center gap-3">
-            <button id="btn-stress-50" onclick="runAttackSimulation(50)" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs mono transition border border-white/10">
-              50 Fast Bids
-            </button>
-            <button id="btn-stress-250" onclick="runAttackSimulation(250)" class="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold text-xs mono transition border border-amber-500/30">
-              250 Concurrency Spike
-            </button>
-            <button id="btn-stress-1000" onclick="runAttackSimulation(1000)" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-gold to-amber-600 hover:opacity-90 text-black font-extrabold text-xs mono transition shadow-lg shadow-brand-gold/25">
-              🔥 1,000 High-Frequency Blitz
-            </button>
-          </div>
-          <div id="sim-progress-box" class="hidden mt-4 pt-3 border-t border-brand-border">
-            <div class="flex justify-between text-xs mono text-slate-400 mb-1.5">
-              <span id="sim-status-label">Blasting atomic bids...</span>
-              <span id="sim-count-label">0 / 0</span>
-            </div>
-            <div class="w-full h-1.5 bg-black rounded-full overflow-hidden">
-              <div id="sim-progress-bar" class="h-full bg-brand-gold transition-all duration-100" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-
+      <div class="specs-grid">
+        <div class="spec-row"><div class="spec-key">Condition</div><div class="spec-val" id="spec-condition">—</div></div>
+        <div class="spec-row"><div class="spec-key">Category</div><div class="spec-val" id="spec-category">—</div></div>
+        <div class="spec-row"><div class="spec-key">Auction ID</div><div class="spec-val" id="spec-id" style="font-size:11px;">—</div></div>
+        <div class="spec-row"><div class="spec-key">Status</div><div class="spec-val" id="spec-status">—</div></div>
       </div>
 
-      <!-- ================================================================ -->
-      <!-- RIGHT PANEL: Live Waterfall & Lua Script Trace (5 Columns)        -->
-      <!-- ================================================================ -->
-      <div class="lg:col-span-5 flex flex-col gap-6">
+      <button class="btn-place-bid" onclick="openBidModal()">Place Bid →</button>
+      <button class="btn-watchlist-outline" onclick="toggleWatchlistDetail()">♡ Add to Watchlist</button>
 
-        <!-- Tabs: Live Orderbook Waterfall vs. Lua Script Execution Inspector -->
-        <div class="glass-panel rounded-2xl p-5 border border-brand-border flex-1 flex flex-col min-h-[580px]">
-          
-          <div class="flex items-center justify-between border-b border-brand-border pb-3 mb-4">
-            <div class="flex items-center gap-2">
-              <button onclick="setRightTab('waterfall')" id="tab-waterfall-btn" class="px-3 py-1.5 rounded-lg bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition">
-                Live Waterfall
-              </button>
-              <button onclick="setRightTab('lua')" id="tab-lua-btn" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider transition">
-                Lua Execution Trace
-              </button>
-            </div>
-            <span class="text-[11px] mono text-slate-500" id="waterfall-count-tag">18 Events</span>
-          </div>
+      <div class="social-proof" id="detail-social">👁 — people are watching this</div>
+      <div class="shipping-row">🚚 Free shipping &nbsp;|&nbsp; ↩ Returns accepted</div>
+      <div class="trust-row">✓ Buyer Protection Guarantee</div>
+    </div>
+  </div>
+</div>
 
-          <!-- TAB 1: Live Waterfall Stream -->
-          <div id="view-waterfall" class="flex-1 flex flex-col overflow-hidden">
-            <div class="grid grid-cols-12 text-[10px] font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-brand-border px-2">
-              <span class="col-span-2">Seq</span>
-              <span class="col-span-4">Bidder</span>
-              <span class="col-span-4 text-right">Amount</span>
-              <span class="col-span-2 text-right">Time</span>
-            </div>
-            <div id="waterfall-stream" class="flex-1 overflow-y-auto space-y-1.5 pt-2 pr-1 font-mono text-xs">
-              <!-- Dynamically populated bid entries -->
-            </div>
-          </div>
+<!-- ============================================================ -->
+<!--  BID MODAL                                                   -->
+<!-- ============================================================ -->
+<div class="bid-modal-overlay" id="bid-modal-overlay" onclick="closeBidIfBg(event)">
+  <div class="bid-modal">
+    <h3>Place Your Bid</h3>
+    <div class="current-price-row">
+      <span>Current bid:</span>
+      <strong id="bid-modal-current">₹—</strong>
+    </div>
+    <label id="bid-min-label">Enter max bid (minimum ₹—):</label>
+    <div class="bid-input-wrap">
+      <div class="bid-currency">₹</div>
+      <input type="number" id="bid-amount-input" placeholder="0" min="1" step="1">
+    </div>
+    <div class="bid-error" id="bid-error">Bid must be higher than the minimum increment.</div>
+    <div class="bid-success" id="bid-success">✓ You are the highest bidder!</div>
+    <button class="btn-confirm-bid" onclick="confirmBid()">Confirm Bid</button>
+    <button class="btn-cancel-bid" onclick="closeBidModal()">Cancel</button>
+  </div>
+</div>
 
-          <!-- TAB 2: Lua Execution Trace Inspector -->
-          <div id="view-lua" class="hidden flex-1 flex flex-col overflow-hidden">
-            <div class="p-3 rounded-xl bg-black/60 border border-brand-border text-xs mono text-slate-300 space-y-2 mb-3">
-              <div class="text-brand-gold font-bold flex items-center gap-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span>Atomic Lua Script Invariant Verification</span>
-              </div>
-              <p class="text-[11px] text-slate-400">
-                Redis evaluates <code class="text-amber-300">place_bid.lua</code> on the single-threaded event loop. If 1,000 bids hit Redis within 1ms, they are queued and executed sequentially with ZERO race conditions.
-              </p>
-            </div>
-            
-            <div class="text-[11px] font-bold uppercase text-slate-500 mb-2">Live Execution Log</div>
-            <div id="lua-trace-log" class="flex-1 overflow-y-auto space-y-1.5 p-3 rounded-xl bg-black/80 border border-brand-border font-mono text-[11px] text-slate-400 leading-relaxed">
-              <!-- Step logs populated here -->
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
+<!-- ============================================================ -->
+<!--  AUTH MODAL                                                  -->
+<!-- ============================================================ -->
+<div class="auth-overlay" id="auth-overlay" onclick="closeAuthIfBg(event)">
+  <div class="auth-modal">
+    <button class="auth-close" onclick="closeAuth()">×</button>
+    <h3>Welcome Back</h3>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login', this)">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('register', this)">Register</div>
     </div>
 
-  </main>
+    <!-- Login form -->
+    <form class="auth-form" id="login-form" onsubmit="doLogin(event)">
+      <div class="auth-error" id="login-error"></div>
+      <input type="text" id="login-username" placeholder="Username" required autocomplete="username">
+      <input type="password" id="login-password" placeholder="Password" required autocomplete="current-password">
+      <button type="submit" class="btn-auth-submit">Sign In</button>
+    </form>
 
-  <!-- ====================================================================== -->
-  <!-- FOOTER                                                                 -->
-  <!-- ====================================================================== -->
-  <footer class="glass-panel border-t border-brand-border py-4 px-6 text-xs text-slate-500 mono flex flex-wrap items-center justify-between gap-4 mt-8">
-    <div class="flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-brand-gold"></span>
-      <span>Gated Real-Time Auction Engine</span>
-      <span class="text-slate-700">•</span>
-      <span>FastAPI WebSockets, Redis Pub/Sub, PostgreSQL</span>
-    </div>
-    <div class="flex items-center gap-4">
-      <a href="https://github.com/tejashr0716/Gated-Real-Time-Auction-with-Low-Latency" target="_blank" class="hover:text-white transition flex items-center gap-1">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/></svg>
-        GitHub Repository
-      </a>
-      <span class="text-slate-700">•</span>
-      <span>Designed by Tejas HR</span>
-    </div>
-  </footer>
+    <!-- Register form (hidden by default) -->
+    <form class="auth-form" id="register-form" style="display:none;" onsubmit="doRegister(event)">
+      <div class="auth-error" id="register-error"></div>
+      <input type="text" id="reg-username" placeholder="Username" required autocomplete="username">
+      <input type="email" id="reg-email" placeholder="Email" required autocomplete="email">
+      <input type="password" id="reg-password" placeholder="Password" required autocomplete="new-password">
+      <button type="submit" class="btn-auth-submit">Create Account</button>
+    </form>
 
-  <!-- ====================================================================== -->
-  <!-- AUDIO SYNTHESIS & SCRIPT LOGIC                                         -->
-  <!-- ====================================================================== -->
-  <script>
-    // --- Web Audio API Synthesizer (Zero External Dependencies) ---
-    let audioCtx = null;
-    let soundEnabled = true;
+    <div class="auth-msg" style="color:var(--muted);">Secure bidding requires a free account.</div>
+  </div>
+</div>
 
-    function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-    }
+<!-- ============================================================ -->
+<!--  TOAST CONTAINER                                             -->
+<!-- ============================================================ -->
+<div class="toast-container" id="toast-container"></div>
 
-    function playTone(freq, type, duration, gainLevel) {
-      if (!soundEnabled) return;
-      try {
-        initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(gainLevel || 0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-      } catch (e) {}
-    }
+<!-- ============================================================ -->
+<!--  JAVASCRIPT                                                  -->
+<!-- ============================================================ -->
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+let allAuctions = [];
+let filteredAuctions = [];
+let displayedCount = 0;
+const PAGE_SIZE = 12;
+let currentFilter = 'all';
+let currentSort = 'newest';
+let currentCategory = '';
+let searchQuery = '';
+let watchlist = new Set(JSON.parse(localStorage.getItem('watchlist') || '[]'));
+let authToken = localStorage.getItem('agy_token') || null;
+let authUsername = localStorage.getItem('agy_username') || null;
+let currentDetailId = null;
+let detailCountdownInterval = null;
+let cardCountdownIntervals = {};
+let liveWS = null;
+let currentDetailAuction = null;
 
-    function playGavel() {
-      playTone(180, 'triangle', 0.25, 0.35);
-      setTimeout(() => playTone(85, 'sine', 0.3, 0.4), 80);
-    }
-    function playChime() {
-      playTone(880, 'sine', 0.15, 0.15);
-      setTimeout(() => playTone(1320, 'sine', 0.2, 0.15), 100);
-    }
-    function playBuzz() {
-      playTone(150, 'sawtooth', 0.3, 0.25);
-    }
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  applyAuthState();
+  loadAuctions();
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+});
 
-    document.getElementById('sound-toggle-btn').addEventListener('click', () => {
-      soundEnabled = !soundEnabled;
-      document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
+// ─────────────────────────────────────────────
+//  AUTH HELPERS
+// ─────────────────────────────────────────────
+function applyAuthState() {
+  if (authToken && authUsername) {
+    document.getElementById('auth-signed-out').style.display = 'none';
+    document.getElementById('auth-signed-in').style.display = '';
+    document.getElementById('header-username').textContent = authUsername;
+    document.getElementById('util-username').textContent = authUsername;
+  } else {
+    document.getElementById('auth-signed-out').style.display = '';
+    document.getElementById('auth-signed-in').style.display = 'none';
+    document.getElementById('util-username').textContent = 'Sign in or register';
+  }
+}
+
+function openAuth() { document.getElementById('auth-overlay').classList.add('open'); }
+function closeAuth() { document.getElementById('auth-overlay').classList.remove('open'); }
+function closeAuthIfBg(e) { if (e.target === document.getElementById('auth-overlay')) closeAuth(); }
+
+function handleAccountClick() {
+  if (!authToken) openAuth();
+  else handleSignOut();
+}
+
+function switchAuthTab(tab, el) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('login-form').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? '' : 'none';
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.remove('visible');
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
     });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.detail || 'Login failed'; errEl.classList.add('visible'); return; }
+    authToken = data.access_token;
+    authUsername = username;
+    localStorage.setItem('agy_token', authToken);
+    localStorage.setItem('agy_username', authUsername);
+    applyAuthState();
+    closeAuth();
+    showToast(`Welcome back, ${username}!`, 'success');
+  } catch(err) {
+    errEl.textContent = 'Connection error. Is the backend running?';
+    errEl.classList.add('visible');
+  }
+}
 
-    // --- Data Model & State ---
-    const AUCTIONS_CATALOG = {
-      auc_shelby_gt500: {
-        id: 'auc_shelby_gt500',
-        title: '1967 Shelby GT500 Super Snake (1 of 1 Experimental 427 CI)',
-        category: 'Exotic Automobilia',
-        desc: 'Original prototype commissioned for Goodyear Thunderbolt high-speed tire tests. Powered by Carroll Shelby 427 FE medium-riser V8 generating 520HP. 4-speed manual top-loader. Verified provenance, Registry Certificate #001.',
-        startingPrice: 120000.0,
-        reservePrice: 150000.0,
-        currentPrice: 145000.0,
-        minIncrement: 2500.0,
-        requiredCollateral: 15000.0,
-        highestBidder: 'apex_collector',
-        sequenceId: 18,
-        endTimeMs: Date.now() + 1500000,
-        softCloseSec: 15,
-        extensionSec: 30
-      },
-      auc_patek_6300g: {
-        id: 'auc_patek_6300g',
-        title: 'Patek Philippe Grandmaster Chime Ref. 6300G-010 White Gold',
-        category: 'Haute Horlogerie',
-        desc: 'Most complicated Patek Philippe wristwatch ever produced in regular production. Double-faced reversible case featuring 20 complications, 5 chiming modes, acoustic alarm, and date repeater.',
-        startingPrice: 210000.0,
-        reservePrice: 260000.0,
-        currentPrice: 235000.0,
-        minIncrement: 5000.0,
-        requiredCollateral: 25000.0,
-        highestBidder: 'hyper_bidder',
-        sequenceId: 11,
-        endTimeMs: Date.now() + 2400000,
-        softCloseSec: 15,
-        extensionSec: 30
-      },
-      auc_ferrari_f40_lm: {
-        id: 'auc_ferrari_f40_lm',
-        title: '1989 Ferrari F40 LM Michelotto Competizione (Chassis #79890)',
-        category: 'Exotic Automobilia',
-        desc: 'Factory Michelotto race-spec upgrade. Twin-turbocharged 2.9L Tipo F120B V8 producing 720+ HP at 2.6 bar boost. Carbon-kevlar monocoque, Brembo multi-piston monobloc brakes, OZ Racing magnesium wheels.',
-        startingPrice: 350000.0,
-        reservePrice: 420000.0,
-        currentPrice: 390000.0,
-        minIncrement: 10000.0,
-        requiredCollateral: 40000.0,
-        highestBidder: 'geneva_vault',
-        sequenceId: 9,
-        endTimeMs: Date.now() + 3300000,
-        softCloseSec: 20,
-        extensionSec: 45
-      },
-      auc_carbon_credit_blk: {
-        id: 'auc_carbon_credit_blk',
-        title: '50,000 Verified Amazon Rainforest Carbon Offset Units (VCS-2026)',
-        category: 'Green Commodities',
-        desc: 'Gold Standard certified nature-based REDD+ forest preservation credits. Verified satellite NDVI telemetry auditing canopy density with zero leakage covenants. Instant tokenized ledger retirement.',
-        startingPrice: 75000.0,
-        reservePrice: 90000.0,
-        currentPrice: 82500.0,
-        minIncrement: 1500.0,
-        requiredCollateral: 10000.0,
-        highestBidder: 'nordic_fund',
-        sequenceId: 14,
-        endTimeMs: Date.now() + 900000,
-        softCloseSec: 15,
-        extensionSec: 30
-      }
+async function doRegister(e) {
+  e.preventDefault();
+  const username = document.getElementById('reg-username').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const errEl = document.getElementById('register-error');
+  errEl.classList.remove('visible');
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.detail || 'Registration failed'; errEl.classList.add('visible'); return; }
+    showToast('Account created! Please sign in.', 'success');
+    switchAuthTab('login', document.querySelectorAll('.auth-tab')[0]);
+  } catch(err) {
+    errEl.textContent = 'Connection error.';
+    errEl.classList.add('visible');
+  }
+}
+
+function handleSignOut() {
+  authToken = null; authUsername = null;
+  localStorage.removeItem('agy_token');
+  localStorage.removeItem('agy_username');
+  applyAuthState();
+  showToast('Signed out.', 'info');
+}
+
+// ─────────────────────────────────────────────
+//  LOAD AUCTIONS
+// ─────────────────────────────────────────────
+async function loadAuctions() {
+  try {
+    const res = await fetch('/api/auctions');
+    if (!res.ok) throw new Error('API error');
+    allAuctions = await res.json();
+    updateStats();
+    applyFiltersAndSort();
+    connectGlobalFeed();
+  } catch(err) {
+    // Show error state
+    document.getElementById('auction-grid').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <p>Could not load auctions. Make sure the backend is running on <strong>localhost:8000</strong>.</p>
+      </div>`;
+    addFeedEntry('Backend unreachable — check server', 'outbid');
+  }
+}
+
+function updateStats() {
+  const now = Date.now();
+  const total = allAuctions.length;
+  const activeBids = allAuctions.reduce((s, a) => s + (a.bid_count || 0), 0);
+  const endingSoon = allAuctions.filter(a => a.remaining_seconds > 0 && a.remaining_seconds < 3600).length;
+  const totalValue = allAuctions.reduce((s, a) => s + (a.current_price || a.starting_price || 0), 0);
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-active').textContent = activeBids;
+  document.getElementById('stat-ending').textContent = endingSoon;
+  document.getElementById('stat-value').textContent = '₹' + fmtNum(totalValue);
+}
+
+// ─────────────────────────────────────────────
+//  FILTER / SORT / SEARCH
+// ─────────────────────────────────────────────
+function doSearch() {
+  searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+  applyFiltersAndSort();
+}
+
+function filterCat(cat) {
+  currentCategory = cat;
+  document.querySelectorAll('.cat-link').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  if (cat === 'ending-soon') {
+    currentFilter = 'ending';
+    setFilter('ending', null);
+  } else {
+    applyFiltersAndSort();
+  }
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  if (el) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+  applyFiltersAndSort();
+}
+
+function sortAuctions(val) {
+  currentSort = val;
+  applyFiltersAndSort();
+}
+
+function applyFiltersAndSort() {
+  let items = [...allAuctions];
+
+  // Search
+  if (searchQuery) {
+    items = items.filter(a =>
+      (a.title || '').toLowerCase().includes(searchQuery) ||
+      (a.description || '').toLowerCase().includes(searchQuery) ||
+      (a.category || '').toLowerCase().includes(searchQuery)
+    );
+  }
+
+  // Category
+  if (currentCategory && currentCategory !== 'ending-soon') {
+    items = items.filter(a => (a.category || '').toLowerCase().includes(currentCategory.toLowerCase()));
+  }
+
+  // Filter chip
+  if (currentFilter === 'active') {
+    items = items.filter(a => (a.status || '').toLowerCase() === 'active' && a.remaining_seconds > 0);
+  } else if (currentFilter === 'ending') {
+    items = items.filter(a => a.remaining_seconds > 0 && a.remaining_seconds < 7200);
+  }
+
+  // Sort
+  if (currentSort === 'price-asc') items.sort((a,b) => (a.current_price||0) - (b.current_price||0));
+  else if (currentSort === 'price-desc') items.sort((a,b) => (b.current_price||0) - (a.current_price||0));
+  else if (currentSort === 'ending') items.sort((a,b) => (a.remaining_seconds||99999) - (b.remaining_seconds||99999));
+  else if (currentSort === 'bids') items.sort((a,b) => (b.bid_count||0) - (a.bid_count||0));
+  else items.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+
+  filteredAuctions = items;
+  displayedCount = 0;
+  renderGrid(true);
+}
+
+// ─────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────
+function renderGrid(reset) {
+  const grid = document.getElementById('auction-grid');
+  if (reset) grid.innerHTML = '';
+
+  // Clear old countdowns
+  Object.values(cardCountdownIntervals).forEach(clearInterval);
+  cardCountdownIntervals = {};
+
+  const slice = filteredAuctions.slice(displayedCount, displayedCount + PAGE_SIZE);
+  displayedCount += slice.length;
+
+  if (slice.length === 0 && reset) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>No auctions found. Try a different search or filter.</p></div>`;
+    document.getElementById('load-more-wrap').style.display = 'none';
+    return;
+  }
+
+  slice.forEach(a => grid.appendChild(buildCard(a)));
+  document.getElementById('load-more-wrap').style.display = displayedCount < filteredAuctions.length ? '' : 'none';
+}
+
+function loadMore() {
+  renderGrid(false);
+}
+
+function showGrid() {
+  searchQuery = '';
+  currentCategory = '';
+  currentFilter = 'all';
+  document.getElementById('search-input').value = '';
+  document.querySelectorAll('.filter-chip').forEach((c, i) => { c.classList.toggle('active', i === 0); });
+  document.querySelectorAll('.cat-link').forEach((c, i) => { c.classList.toggle('active', i === 0); });
+  applyFiltersAndSort();
+}
+
+// ─────────────────────────────────────────────
+//  BUILD CARD
+// ─────────────────────────────────────────────
+const CONDITIONS = ['New', 'Pre-Owned', 'Refurbished', 'Like New'];
+const VIEWS = [42, 128, 67, 215, 89, 173, 311, 56, 94, 240];
+
+function buildCard(a) {
+  const card = document.createElement('div');
+  card.className = 'auction-card';
+  card.dataset.id = a.id;
+
+  const condition = CONDITIONS[Math.abs(hashStr(a.id)) % CONDITIONS.length];
+  const views = VIEWS[Math.abs(hashStr(a.id + 'v')) % VIEWS.length];
+  const watching = Math.floor(views / 3);
+  const isFastEnding = a.remaining_seconds > 0 && a.remaining_seconds < 7200;
+  const seed = encodeURIComponent(a.id || a.title || 'item');
+  const imgSrc = a.image_url || `https://picsum.photos/seed/${seed}/300/300`;
+  const price = a.current_price || a.starting_price || 0;
+  const isWatched = watchlist.has(String(a.id));
+
+  card.innerHTML = `
+    <div class="card-img-wrap">
+      <img src="${imgSrc}" alt="${esc(a.title)}" loading="lazy" onerror="this.src='https://picsum.photos/seed/${seed}x/300/300'">
+      <div class="card-condition">${condition}</div>
+      ${isFastEnding ? '<div class="card-fast-ending">FAST ENDING</div>' : ''}
+      <button class="card-watchlist ${isWatched ? 'active' : ''}" data-id="${a.id}" onclick="toggleWatchlist(event, '${a.id}', this)" title="${isWatched ? 'Remove from watchlist' : 'Add to watchlist'}">
+        ${isWatched ? '❤️' : '🤍'}
+      </button>
+      <div class="card-bid-overlay" onclick="openDetail('${a.id}')">Place Bid →</div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">${esc(a.title)}</div>
+      <div class="card-price-label">Current bid</div>
+      <div class="card-price">₹${fmtNum(price)}</div>
+      <div class="card-meta">
+        <span class="card-bids">${a.bid_count || 0} bids</span>
+        <span class="card-timer" id="timer-${a.id}">${formatTimer(a.remaining_seconds)}</span>
+      </div>
+      <div class="card-watching">${watching} watching</div>
+    </div>`;
+
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.card-watchlist') || e.target.closest('.card-bid-overlay')) return;
+    openDetail(a.id);
+  });
+
+  // Per-card countdown
+  if (a.remaining_seconds > 0) {
+    let rem = a.remaining_seconds;
+    const tid = setInterval(() => {
+      rem -= 1;
+      const el = document.getElementById(`timer-${a.id}`);
+      if (!el) { clearInterval(tid); return; }
+      const str = formatTimer(rem);
+      el.textContent = str;
+      el.className = 'card-timer' + (rem < 3600 ? ' urgent' : '');
+      if (rem <= 0) clearInterval(tid);
+    }, 1000);
+    cardCountdownIntervals[a.id] = tid;
+  }
+
+  return card;
+}
+
+// ─────────────────────────────────────────────
+//  WATCHLIST
+// ─────────────────────────────────────────────
+function toggleWatchlist(e, id, btn) {
+  e.stopPropagation();
+  id = String(id);
+  if (watchlist.has(id)) {
+    watchlist.delete(id);
+    btn.textContent = '🤍'; btn.classList.remove('active');
+    showToast('Removed from Watchlist', 'info');
+  } else {
+    watchlist.add(id);
+    btn.textContent = '❤️'; btn.classList.add('active');
+    showToast('Added to Watchlist ❤️', 'success');
+  }
+  localStorage.setItem('watchlist', JSON.stringify([...watchlist]));
+}
+
+function toggleWatchlistDetail() {
+  if (!currentDetailId) return;
+  const id = String(currentDetailId);
+  const btn = document.querySelector(`.card-watchlist[data-id="${id}"]`);
+  if (watchlist.has(id)) {
+    watchlist.delete(id);
+    if (btn) { btn.textContent = '🤍'; btn.classList.remove('active'); }
+    showToast('Removed from Watchlist', 'info');
+  } else {
+    watchlist.add(id);
+    if (btn) { btn.textContent = '❤️'; btn.classList.add('active'); }
+    showToast('Added to Watchlist ❤️', 'success');
+  }
+  localStorage.setItem('watchlist', JSON.stringify([...watchlist]));
+}
+
+// ─────────────────────────────────────────────
+//  DETAIL PANEL
+// ─────────────────────────────────────────────
+function openDetail(id) {
+  const a = allAuctions.find(x => String(x.id) === String(id));
+  if (!a) return;
+  currentDetailAuction = a;
+  currentDetailId = a.id;
+
+  const price = a.current_price || a.starting_price || 0;
+  const seed = encodeURIComponent(a.id || a.title || 'item');
+  const imgSrc = a.image_url || `https://picsum.photos/seed/${seed}/600/600`;
+  const condition = CONDITIONS[Math.abs(hashStr(a.id)) % CONDITIONS.length];
+  const views = VIEWS[Math.abs(hashStr(a.id + 'v')) % VIEWS.length];
+  const watching = Math.floor(views / 3);
+
+  document.getElementById('detail-main-img').src = imgSrc;
+  document.getElementById('detail-main-img').alt = a.title;
+  document.getElementById('detail-viewed').textContent = `${views} VIEWED TODAY`;
+  document.getElementById('detail-watching-sm').textContent = watching;
+  document.getElementById('detail-title').textContent = a.title;
+  document.getElementById('detail-price').textContent = `₹${fmtNum(price)}`;
+  document.getElementById('detail-bid-count').textContent = `${a.bid_count || 0} bids`;
+  document.getElementById('spec-condition').textContent = condition;
+  document.getElementById('spec-category').textContent = a.category || '—';
+  document.getElementById('spec-id').textContent = a.id;
+  document.getElementById('spec-status').textContent = (a.status || '—').toUpperCase();
+  document.getElementById('detail-social').textContent = `👁 ${watching} people are watching this`;
+
+  // Seller
+  const sellerName = a.highest_bidder_name || 'AuctionHouse';
+  const sellerInitial = sellerName.charAt(0).toUpperCase();
+  document.getElementById('detail-avatar').textContent = sellerInitial;
+  document.getElementById('detail-seller-name').textContent = sellerName;
+  document.getElementById('detail-seller-rating').textContent = `(${Math.floor(Math.random()*500)+50} feedback)`;
+
+  // Thumbnails
+  const thumbRow = document.getElementById('thumb-row');
+  thumbRow.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const th = document.createElement('img');
+    th.className = 'thumb' + (i === 0 ? ' active' : '');
+    th.src = `https://picsum.photos/seed/${seed}${i}/120/120`;
+    th.onclick = () => {
+      document.getElementById('detail-main-img').src = `https://picsum.photos/seed/${seed}${i}/600/600`;
+      thumbRow.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+      th.classList.add('active');
     };
+    thumbRow.appendChild(th);
+  }
 
-    let activeAuctionId = 'auc_shelby_gt500';
-    let currentAuction = AUCTIONS_CATALOG[activeAuctionId];
-    let recentBids = [];
-    let ws = null;
-    let isConnectedToRealBackend = false;
-    let userEscrow = 750000.0;
-    let userLocked = 0.0;
-    let currentUserId = 'a0000001-0000-0000-0000-000000000001';
-    let currentUsername = 'apex_collector';
+  // Countdown
+  if (detailCountdownInterval) clearInterval(detailCountdownInterval);
+  let rem = a.remaining_seconds || 0;
+  const updateDetailCountdown = () => {
+    const el = document.getElementById('detail-countdown');
+    if (!el) return;
+    el.textContent = rem > 0 ? `${formatTimerLong(rem)}` : 'Ended';
+    el.className = 'countdown-val' + (rem < 3600 ? ' urgent' : '');
+    rem -= 1;
+  };
+  updateDetailCountdown();
+  detailCountdownInterval = setInterval(updateDetailCountdown, 1000);
 
-    // --- Formatting Helpers ---
-    function formatCurrency(val) {
-      return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    function formatTime(ms) {
-      if (ms <= 0) return '00:00';
-      const totalSec = Math.floor(ms / 1000);
-      const m = Math.floor(totalSec / 60);
-      const s = totalSec % 60;
-      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
+  // Open WS for this auction
+  connectAuctionWS(a.id);
 
-    // --- UI Update Pipeline ---
-    function updateAuctionUI() {
-      const a = currentAuction;
-      document.getElementById('lot-title').textContent = a.title;
-      document.getElementById('lot-desc').textContent = a.desc;
-      document.getElementById('lot-category').textContent = a.category;
-      document.getElementById('lot-current-price').textContent = formatCurrency(a.currentPrice);
-      document.getElementById('lot-highest-bidder').textContent = a.highestBidder || 'None';
-      document.getElementById('lot-seq-badge').textContent = `Seq #${a.sequenceId}`;
-      document.getElementById('lot-min-increment').textContent = `+${formatCurrency(a.minIncrement)}`;
-      document.getElementById('lot-required-collateral').textContent = formatCurrency(a.requiredCollateral);
+  document.getElementById('detail-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
 
-      // Reserve badge
-      const reserveBadge = document.getElementById('reserve-badge');
-      if (a.currentPrice >= a.reservePrice) {
-        reserveBadge.textContent = 'Reserve Met';
-        reserveBadge.className = 'px-2.5 py-1 text-xs font-semibold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-      } else {
-        reserveBadge.textContent = 'Reserve Not Met';
-        reserveBadge.className = 'px-2.5 py-1 text-xs font-semibold rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30';
-      }
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  if (detailCountdownInterval) { clearInterval(detailCountdownInterval); detailCountdownInterval = null; }
+  currentDetailId = null;
+  currentDetailAuction = null;
+}
 
-      // Update Tab highlight
-      document.querySelectorAll('.lot-tab').forEach(el => {
-        el.className = 'lot-tab px-4 py-2.5 rounded-xl border border-brand-border text-left flex items-center gap-3 min-w-[260px] glass-panel hover:border-slate-600 transition-all';
-      });
-      const activeTabEl = document.getElementById(`tab-${a.id}`);
-      if (activeTabEl) {
-        activeTabEl.className = 'lot-tab px-4 py-2.5 rounded-xl border text-left flex items-center gap-3 min-w-[260px] glass-gold transition-all pulse-glow';
-      }
+function closeDetailIfBg(e) {
+  if (e.target === document.getElementById('detail-overlay')) closeDetail();
+}
 
-      // Update tab price
-      const tabPriceEl = document.getElementById(`tab-price-${a.id}`);
-      if (tabPriceEl) tabPriceEl.textContent = formatCurrency(a.currentPrice);
-    }
+// ─────────────────────────────────────────────
+//  BID MODAL
+// ─────────────────────────────────────────────
+function openBidModal() {
+  if (!authToken) { openAuth(); showToast('Sign in to place a bid', 'info'); return; }
+  if (!currentDetailAuction) return;
+  const a = currentDetailAuction;
+  const price = a.current_price || a.starting_price || 0;
+  const minBid = price + (a.min_increment || 100);
+  document.getElementById('bid-modal-current').textContent = `₹${fmtNum(price)}`;
+  document.getElementById('bid-min-label').textContent = `Enter max bid (minimum ₹${fmtNum(minBid)}):`;
+  document.getElementById('bid-amount-input').value = '';
+  document.getElementById('bid-amount-input').min = minBid;
+  document.getElementById('bid-error').classList.remove('visible');
+  document.getElementById('bid-success').classList.remove('visible');
+  document.getElementById('bid-modal-overlay').classList.add('open');
+}
 
-    function selectAuction(aucId) {
-      activeAuctionId = aucId;
-      currentAuction = AUCTIONS_CATALOG[aucId];
-      updateAuctionUI();
-      renderWaterfall();
-      if (isConnectedToRealBackend) {
-        connectWebSocket(aucId);
-      }
-      logLuaTrace(`[SYSTEM] Switched active room focus to lot: ${aucId}`);
-    }
+function closeBidModal() { document.getElementById('bid-modal-overlay').classList.remove('open'); }
+function closeBidIfBg(e) { if (e.target === document.getElementById('bid-modal-overlay')) closeBidModal(); }
 
-    // --- Waterfall Renderer ---
-    function renderWaterfall() {
-      const container = document.getElementById('waterfall-stream');
-      container.innerHTML = '';
-      document.getElementById('waterfall-count-tag').textContent = `${recentBids.length} Events`;
+async function confirmBid() {
+  if (!currentDetailAuction || !authToken) return;
+  const a = currentDetailAuction;
+  const price = a.current_price || a.starting_price || 0;
+  const minBid = price + (a.min_increment || 100);
+  const amount = parseFloat(document.getElementById('bid-amount-input').value);
+  const errEl = document.getElementById('bid-error');
+  const sucEl = document.getElementById('bid-success');
+  errEl.classList.remove('visible');
+  sucEl.classList.remove('visible');
 
-      recentBids.slice(0, 35).forEach((bid, idx) => {
-        const row = document.createElement('div');
-        row.className = `grid grid-cols-12 items-center p-2 rounded-lg ${idx === 0 ? 'bg-brand-gold/15 border border-brand-gold/30 flash-accept' : 'bg-black/30 hover:bg-black/50 border border-brand-border/60'} transition`;
-        const timeStr = bid.timestamp ? new Date(bid.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--';
-        
-        row.innerHTML = `
-          <span class="col-span-2 text-slate-400 font-bold">#${bid.sequence_id || bid.sequenceId}</span>
-          <div class="col-span-4 flex items-center gap-1.5 overflow-hidden text-ellipsis whitespace-nowrap">
-            <span class="w-1.5 h-1.5 rounded-full ${idx === 0 ? 'bg-emerald-400' : 'bg-slate-500'}"></span>
-            <span class="text-white">${bid.bidder_name || bid.bidderName}</span>
-          </div>
-          <span class="col-span-4 text-right font-bold ${idx === 0 ? 'text-brand-gold' : 'text-slate-200'}">
-            ${formatCurrency(bid.bid_amount || bid.amount)}
-          </span>
-          <span class="col-span-2 text-right text-[10px] text-slate-500">${timeStr}</span>
-        `;
-        container.appendChild(row);
-      });
-    }
+  if (!amount || amount < minBid) {
+    errEl.textContent = `Bid must be at least ₹${fmtNum(minBid)}.`;
+    errEl.classList.add('visible');
+    return;
+  }
 
-    function logLuaTrace(msg) {
-      const container = document.getElementById('lua-trace-log');
-      const p = document.createElement('div');
-      const timeTag = new Date().toISOString().split('T')[1].slice(0, -1);
-      p.innerHTML = `<span class="text-slate-600">[${timeTag}]</span> ${msg}`;
-      container.insertBefore(p, container.firstChild);
-      if (container.children.length > 50) container.removeChild(container.lastChild);
-    }
-
-    // --- Bid Actions (REST / WebSocket / Simulation) ---
-    async function placeQuickBid(increment) {
-      const newAmount = currentAuction.currentPrice + increment;
-      await executeBid(newAmount);
-    }
-
-    async function placeCustomBid() {
-      const input = document.getElementById('custom-bid-input');
-      const val = parseFloat(input.value);
-      if (!val || isNaN(val)) {
-        showStatus('Please enter a valid numeric bid amount.', 'error');
-        playBuzz();
-        return;
-      }
-      await executeBid(val);
-      input.value = '';
-    }
-
-    async function executeBid(amount) {
-      initAudio();
-      const a = currentAuction;
-
-      // 1. Client-Side Pre-validation
-      if (amount < a.currentPrice + a.minIncrement) {
-        showStatus(`Bid rejected: Minimum required is ${formatCurrency(a.currentPrice + a.minIncrement)}`, 'error');
-        playBuzz();
-        logLuaTrace(`<span class="text-rose-400">❌ ERR_BID_TOO_LOW:</span> Bid ${formatCurrency(amount)} &lt; Required ${formatCurrency(a.currentPrice + a.minIncrement)}`);
-        return;
-      }
-
-      if (userEscrow < a.requiredCollateral) {
-        showStatus(`Gated Access Violation: Escrow collateral (${formatCurrency(userEscrow)}) &lt; required (${formatCurrency(a.requiredCollateral)})`, 'error');
-        playBuzz();
-        logLuaTrace(`<span class="text-rose-400">❌ ERR_INSUFFICIENT_ESCROW:</span> Insufficient unencumbered collateral.`);
-        return;
-      }
-
-      // 2. Dispatch via WebSocket or Live REST backend if reachable
-      if (isConnectedToRealBackend && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          action: 'BID',
-          bidder_id: currentUserId,
-          bidder_name: currentUsername,
-          amount: amount
-        }));
-        showStatus('Atomic bid dispatched to WebSocket...', 'success');
-        return;
-      }
-
-      // If backend REST fallback
-      try {
-        const resp = await fetch(`/api/auctions/${a.id}/bid`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            auction_id: a.id,
-            bidder_id: currentUserId,
-            bidder_name: currentUsername,
-            bid_amount: amount
-          })
-        });
-        if (resp.ok) {
-          const res = await resp.json();
-          handleIncomingBidAccepted(res);
-          return;
-        }
-      } catch (err) {
-        // Fallback to in-browser high-fidelity emulation (for GitHub Pages standalone showcase)
-      }
-
-      // 3. High-Fidelity In-Browser Lua Execution Emulation
-      applyLocalAtomicBid(a.id, currentUserId, currentUsername, amount, a.requiredCollateral);
-    }
-
-    function applyLocalAtomicBid(auctionId, bidderId, bidderName, amount, collateral) {
-      const a = AUCTIONS_CATALOG[auctionId];
-      if (!a) return;
-
-      const now = Date.now();
-      const seq = a.sequenceId + 1;
-      let extended = false;
-
-      // Anti-sniping check: if within soft-close window
-      const remainingSec = (a.endTimeMs - now) / 1000.0;
-      if (remainingSec <= a.softCloseSec && remainingSec > 0) {
-        a.endTimeMs += (a.extensionSec * 1000);
-        extended = true;
-        triggerSnipingAlert();
-      }
-
-      a.sequenceId = seq;
-      a.currentPrice = amount;
-      a.highestBidder = bidderName;
-
-      const event = {
-        event: 'BID_ACCEPTED',
-        auction_id: auctionId,
-        sequence_id: seq,
-        bid_amount: amount,
-        bidder_id: bidderId,
-        bidder_name: bidderName,
-        timestamp: now,
-        end_time_ms: a.endTimeMs,
-        extended: extended
-      };
-
-      recentBids.unshift(event);
-      updateAuctionUI();
-      renderWaterfall();
-      playGavel();
-      showStatus(`Bid Accepted! Seq #${seq} at ${formatCurrency(amount)}`, 'success');
-
-      logLuaTrace(`<span class="text-emerald-400">⚡ [LUA ATOMIC EXEC]</span> Seq #${seq} | Bidder: <strong>${bidderName}</strong> | Amount: <strong class="text-brand-gold">${formatCurrency(amount)}</strong> | Latency: <strong>0.84ms</strong>${extended ? ' | <span class="text-amber-300">SNIPED: +30s</span>' : ''}`);
-    }
-
-    function handleIncomingBidAccepted(data) {
-      const bid = data.data || data;
-      const auc = AUCTIONS_CATALOG[bid.auction_id];
-      if (auc) {
-        auc.currentPrice = bid.bid_amount;
-        auc.highestBidder = bid.bidder_name;
-        auc.sequenceId = bid.sequence_id;
-        if (bid.end_time_ms) auc.endTimeMs = bid.end_time_ms;
-        if (bid.extended) triggerSnipingAlert();
-      }
-      recentBids.unshift(bid);
-      updateAuctionUI();
-      renderWaterfall();
-      playGavel();
-      showStatus(`Bid Accepted! Seq #${bid.sequence_id} at ${formatCurrency(bid.bid_amount)}`, 'success');
-      logLuaTrace(`<span class="text-emerald-400">⚡ [TELEMETRY BROADCAST]</span> Seq #${bid.sequence_id} | ${bid.bidder_name} | ${formatCurrency(bid.bid_amount)}`);
-    }
-
-    function triggerSnipingAlert() {
-      const banner = document.getElementById('sniping-alert');
-      banner.classList.remove('hidden');
-      playTone(660, 'square', 0.2, 0.2);
-      setTimeout(() => {
-        banner.classList.add('hidden');
-      }, 6000);
-    }
-
-    function showStatus(msg, type) {
-      const el = document.getElementById('bid-status-msg');
-      el.textContent = msg;
-      el.className = type === 'error' ? 'mono text-rose-400 font-semibold' : 'mono text-emerald-400 font-medium';
-    }
-
-    // --- Concurrency Attack Simulator ---
-    async function runAttackSimulation(totalRequests) {
-      initAudio();
-      const btn = document.getElementById(`btn-stress-${totalRequests}`);
-      const progBox = document.getElementById('sim-progress-box');
-      const progBar = document.getElementById('sim-progress-bar');
-      const countLabel = document.getElementById('sim-count-label');
-      const a = currentAuction;
-
-      progBox.classList.remove('hidden');
-      progBar.style.width = '0%';
-      countLabel.textContent = `0 / ${totalRequests}`;
-      logLuaTrace(`[ATTACK SIM] Launching ${totalRequests} concurrent bots targeting lot ${a.id}...`);
-
-      const botNames = ['QuantumArb', 'ApexWhale', 'GenevaQuant', 'NordicBot', 'TokyoSpeed', 'ZurichVault', 'MonacoHFT', 'CyberFund'];
-      let placed = 0;
-      let startPrice = a.currentPrice;
-
-      const interval = Math.max(8, Math.floor(1200 / totalRequests));
-
-      for (let i = 1; i <= totalRequests; i++) {
-        const botName = botNames[i % botNames.length];
-        const nextPrice = startPrice + (i * a.minIncrement);
-        
-        applyLocalAtomicBid(a.id, `bot_${i % 8}`, botName, nextPrice, a.requiredCollateral);
-        placed++;
-
-        const pct = Math.floor((placed / totalRequests) * 100);
-        progBar.style.width = `${pct}%`;
-        countLabel.textContent = `${placed} / ${totalRequests}`;
-
-        // Random jitter
-        if (i % 5 === 0) {
-          await new Promise(r => setTimeout(r, interval));
-        }
-      }
-
-      progBar.style.width = '100%';
-      countLabel.textContent = `${totalRequests} / ${totalRequests} (Zero Race Conditions)`;
-      playChime();
-      logLuaTrace(`<span class="text-brand-neon font-bold">🏁 [ATTACK COMPLETE]</span> Processed ${totalRequests} bids in ${interval * (totalRequests/5)}ms. Zero dropped sequences.`);
-      setTimeout(() => progBox.classList.add('hidden'), 4000);
-    }
-
-    // --- Reset Auction State ---
-    async function resetCurrentAuction() {
-      const a = currentAuction;
-      a.currentPrice = a.startingPrice;
-      a.highestBidder = 'None';
-      a.sequenceId = 0;
-      a.endTimeMs = Date.now() + 1800000;
-      recentBids = [];
-      updateAuctionUI();
-      renderWaterfall();
-      logLuaTrace(`[RESET] Orderbook and state cleared for lot ${a.id}`);
-      showStatus('Auction state reset to starting price.', 'success');
-      playTone(440, 'sine', 0.2, 0.2);
-
-      // Try calling backend reset endpoint
-      try {
-        await fetch(`/api/auctions/${a.id}/reset`, { method: 'POST' });
-      } catch (e) {}
-    }
-
-    // --- Deposit Collateral Simulator ---
-    document.getElementById('deposit-btn').addEventListener('click', () => {
-      userEscrow += 50000.0;
-      document.getElementById('user-escrow-balance').textContent = formatCurrency(userEscrow);
-      showStatus('Deposited +$50,000.00 unencumbered collateral.', 'success');
-      playChime();
-      logLuaTrace(`[ESCROW] Deposit confirmed: Balance now ${formatCurrency(userEscrow)}`);
+  try {
+    const res = await fetch(`/api/auctions/${a.id}/bid`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ auction_id: a.id, bid_amount: amount })
     });
+    const data = await res.json();
 
-    // --- Right Tab Switcher ---
-    function setRightTab(tab) {
-      const vWater = document.getElementById('view-waterfall');
-      const vLua = document.getElementById('view-lua');
-      const btnWater = document.getElementById('tab-waterfall-btn');
-      const btnLua = document.getElementById('tab-lua-btn');
-
-      if (tab === 'waterfall') {
-        vWater.classList.remove('hidden');
-        vLua.classList.add('hidden');
-        btnWater.className = 'px-3 py-1.5 rounded-lg bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition';
-        btnLua.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider transition';
-      } else {
-        vWater.classList.add('hidden');
-        vLua.classList.remove('hidden');
-        btnWater.className = 'px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-bold text-xs uppercase tracking-wider transition';
-        btnLua.className = 'px-3 py-1.5 rounded-lg bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition';
-      }
+    if (!res.ok) {
+      errEl.textContent = data.detail || 'Bid rejected.';
+      errEl.classList.add('visible');
+      return;
     }
 
-    // --- Countdown Timer Heartbeat ---
-    setInterval(() => {
-      const now = Date.now();
-      const remaining = currentAuction.endTimeMs - now;
-      const el = document.getElementById('lot-countdown');
-      if (remaining <= 0) {
-        el.textContent = 'HAMMER DROPPED';
-        el.className = 'text-2xl sm:text-3xl font-extrabold mono text-rose-500 tracking-tight';
-      } else {
-        el.textContent = formatTime(remaining);
-        if (remaining <= 15000) {
-          el.className = 'text-3xl sm:text-4xl font-extrabold mono text-rose-400 tracking-tight animate-pulse';
-        } else {
-          el.className = 'text-3xl sm:text-4xl font-extrabold mono text-white tracking-tight';
-        }
-      }
-    }, 500);
+    sucEl.classList.add('visible');
+    showToast(`✓ Bid of ₹${fmtNum(amount)} placed!`, 'success');
 
-    function updateActiveClientsCount(count) {
-      const el = document.getElementById('telemetry-clients-count');
-      if (!el) return;
-      if (typeof count === 'number' && Number.isFinite(count) && count >= 0) {
-        const noun = count === 1 ? 'Client' : 'Clients';
-        el.textContent = `${count} ${noun} Connected (Process)`;
-      } else {
-        el.textContent = 'Disconnected (0 Clients)';
-      }
+    // Update local state
+    a.current_price = amount;
+    a.bid_count = (a.bid_count || 0) + 1;
+    currentDetailAuction = a;
+    document.getElementById('detail-price').textContent = `₹${fmtNum(amount)}`;
+    document.getElementById('detail-bid-count').textContent = `${a.bid_count} bids`;
+    document.getElementById('bid-modal-current').textContent = `₹${fmtNum(amount)}`;
+
+    // Update allAuctions
+    const idx = allAuctions.findIndex(x => String(x.id) === String(a.id));
+    if (idx !== -1) {
+      allAuctions[idx].current_price = amount;
+      allAuctions[idx].bid_count = a.bid_count;
     }
 
-    // --- Real-time WebSocket Connection Manager ---
-    function connectWebSocket(auctionId) {
-      if (ws) {
-        ws.close();
-        ws = null;
-      }
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/ws/auctions/${auctionId}`;
+    setTimeout(closeBidModal, 1600);
+  } catch(err) {
+    errEl.textContent = 'Connection error. Please try again.';
+    errEl.classList.add('visible');
+  }
+}
 
+// ─────────────────────────────────────────────
+//  LIST ITEM (SELL)
+// ─────────────────────────────────────────────
+function openSellTab() {
+  document.getElementById('sell-tab-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function listItem(e) {
+  e.preventDefault();
+  if (!authToken) { openAuth(); showToast('Sign in to list an item', 'info'); return; }
+  const title = document.getElementById('sell-title').value.trim();
+  const description = document.getElementById('sell-desc').value.trim();
+  const category = document.getElementById('sell-cat').value;
+  const starting_price = parseFloat(document.getElementById('sell-start').value);
+  const reserve_price = parseFloat(document.getElementById('sell-reserve').value) || starting_price * 1.5;
+  const duration_days = parseInt(document.getElementById('sell-duration').value);
+  const image_url = document.getElementById('sell-image').value.trim() || null;
+  const end_time = new Date(Date.now() + duration_days * 86400000).toISOString();
+
+  try {
+    const res = await fetch('/api/auctions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({ title, description, category, starting_price, reserve_price, end_time, image_url })
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.detail || 'Failed to list item', 'error'); return; }
+    showToast('Item listed successfully! 🎉', 'success');
+    e.target.reset();
+    // Reload auctions to show new item
+    setTimeout(loadAuctions, 500);
+  } catch(err) {
+    showToast('Connection error listing item', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  WEBSOCKET — GLOBAL FEED
+// ─────────────────────────────────────────────
+function connectGlobalFeed() {
+  // Connect to the first active auction's feed as global feed, or use a generic endpoint
+  const actives = allAuctions.filter(a => a.remaining_seconds > 0);
+  if (actives.length === 0) {
+    addFeedEntry('No active auctions — start by listing an item!', 'info');
+    return;
+  }
+  // Connect to first few auctions to populate feed
+  actives.slice(0, 3).forEach(a => connectAuctionFeedWS(a.id));
+}
+
+const feedConnected = new Set();
+
+function connectAuctionFeedWS(auctionId) {
+  if (feedConnected.has(auctionId)) return;
+  feedConnected.add(auctionId);
+  try {
+    const ws = new WebSocket(`ws://localhost:8000/ws/auctions/${auctionId}`);
+    ws.onmessage = (ev) => {
       try {
-        ws = new WebSocket(wsUrl);
+        const msg = JSON.parse(ev.data);
+        const event = msg.event || msg.type || '';
+        if (event === 'BID_ACCEPTED' || event === 'BID_UPDATE' || msg.bid_amount) {
+          const bidder = msg.bidder_name || msg.bidder_id || 'Bidder';
+          const amount = msg.bid_amount || msg.new_price || 0;
+          const auc = allAuctions.find(a => String(a.id) === String(auctionId));
+          const title = auc ? auc.title : auctionId;
+          addFeedEntry(`${bidder} placed ₹${fmtNum(amount)} on ${title.substring(0, 30)}`, 'new-bid');
 
-        ws.onopen = () => {
-          isConnectedToRealBackend = true;
-          document.getElementById('backend-status-pill').innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> WebSocket Live';
-          logLuaTrace(`[WEBSOCKET] Connected to live FastAPI telemetry pipeline: ${auctionId}`);
-        };
+          // Update local auction state
+          if (auc) {
+            auc.current_price = amount;
+            auc.bid_count = (auc.bid_count || 0) + 1;
+            const priceEl = document.querySelector(`.auction-card[data-id="${auctionId}"] .card-price`);
+            if (priceEl) priceEl.textContent = `₹${fmtNum(amount)}`;
+            const bidsEl = document.querySelector(`.auction-card[data-id="${auctionId}"] .card-bids`);
+            if (bidsEl) bidsEl.textContent = `${auc.bid_count} bids`;
+          }
+          // Update detail if open
+          if (String(currentDetailId) === String(auctionId) && currentDetailAuction) {
+            currentDetailAuction.current_price = amount;
+            currentDetailAuction.bid_count = (currentDetailAuction.bid_count || 0) + 1;
+            document.getElementById('detail-price').textContent = `₹${fmtNum(amount)}`;
+            document.getElementById('detail-bid-count').textContent = `${currentDetailAuction.bid_count} bids`;
+          }
+        } else if (event === 'HEARTBEAT' || event === 'PONG') {
+          // silent
+        } else if (event === 'AUCTION_EXTENDED') {
+          addFeedEntry(`Auction extended for extra bidding time!`, 'outbid');
+        } else if (event === 'AUCTION_CLOSED' || event === 'AUCTION_ENDED') {
+          addFeedEntry(`Auction ended!`, 'outbid');
+        }
+      } catch(_) {}
+    };
+    ws.onclose = () => { feedConnected.delete(auctionId); };
+    ws.onerror = () => { feedConnected.delete(auctionId); };
+  } catch(_) {}
+}
 
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.event === 'ROOM_HANDSHAKE') {
-              if (data.meta && data.meta.current_price) {
-                currentAuction.currentPrice = parseFloat(data.meta.current_price);
-                currentAuction.sequenceId = parseInt(data.meta.sequence_id || 0);
-                currentAuction.highestBidder = data.meta.highest_bidder_name;
-              }
-              if (data.recent_bids && data.recent_bids.length > 0) {
-                recentBids = data.recent_bids;
-              }
-              if (typeof data.active_ws_connections === 'number') {
-                updateActiveClientsCount(data.active_ws_connections);
-              } else if (typeof data.active_room_clients === 'number') {
-                updateActiveClientsCount(data.active_room_clients);
-              }
-              updateAuctionUI();
-              renderWaterfall();
-            } else if (data.event === 'BID_ACCEPTED') {
-              handleIncomingBidAccepted(data);
-            } else if (data.event === 'TELEMETRY_TICK') {
-              if (data.telemetry) {
-                document.getElementById('stat-p50').textContent = `${data.telemetry.p50_latency_ms.toFixed(2)} ms`;
-                document.getElementById('stat-p99').textContent = `${data.telemetry.p99_latency_ms.toFixed(2)} ms`;
-                document.getElementById('stat-rps').textContent = `${data.telemetry.bids_per_second.toFixed(0)} bids/s`;
-                document.getElementById('stat-total-bids').textContent = data.telemetry.total_bids_processed.toLocaleString();
-                if (typeof data.telemetry.active_ws_connections === 'number') {
-                  updateActiveClientsCount(data.telemetry.active_ws_connections);
-                }
-              }
-            }
-          } catch (e) {}
-        };
+function connectAuctionWS(auctionId) {
+  connectAuctionFeedWS(auctionId);
+}
 
-        ws.onclose = () => {
-          isConnectedToRealBackend = false;
-          document.getElementById('backend-status-pill').innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Standalone Showcase';
-          updateActiveClientsCount(null);
-        };
+function addFeedEntry(text, type) {
+  const feed = document.getElementById('live-feed');
+  const existing = feed.querySelector('[data-placeholder]');
+  if (existing) existing.remove();
 
-        ws.onerror = () => {
-          isConnectedToRealBackend = false;
-          updateActiveClientsCount(null);
-        };
-      } catch (e) {
-        isConnectedToRealBackend = false;
-        updateActiveClientsCount(null);
-      }
-    }
+  const entry = document.createElement('div');
+  entry.className = `feed-entry ${type || ''}`;
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  entry.innerHTML = `<div>${text}</div><div class="feed-time">${timeStr}</div>`;
+  feed.insertBefore(entry, feed.firstChild);
 
-    // --- Initialization Seed ---
-    function initSeed() {
-      // Seed initial waterfall bids
-      recentBids = [
-        { sequence_id: 18, bidder_name: 'apex_collector', bid_amount: 145000.0, timestamp: Date.now() - 45000 },
-        { sequence_id: 17, bidder_name: 'hyper_bidder', bid_amount: 142500.0, timestamp: Date.now() - 180000 },
-        { sequence_id: 16, bidder_name: 'silicon_syndicate', bid_amount: 140000.0, timestamp: Date.now() - 360000 },
-        { sequence_id: 15, bidder_name: 'geneva_vault', bid_amount: 137500.0, timestamp: Date.now() - 520000 },
-        { sequence_id: 14, bidder_name: 'apex_collector', bid_amount: 135000.0, timestamp: Date.now() - 700000 }
-      ];
+  // Keep max 20 entries
+  while (feed.children.length > 20) feed.removeChild(feed.lastChild);
+}
 
-      logLuaTrace('[SYSTEM] Engine initialized. Atomic script SHA pre-cached.');
-      logLuaTrace('[POSTGRES] Connected to auction_db with ACID transaction pool.');
-      logLuaTrace('[TELEMETRY] Listening on channel:auction:auc_shelby_gt500 (Pub/Sub).');
+// ─────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────
+function showToast(msg, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type || 'info'}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3200);
+}
 
-      updateAuctionUI();
-      renderWaterfall();
+// ─────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────
+function fmtNum(n) {
+  if (!n && n !== 0) return '—';
+  return Math.round(n).toLocaleString('en-IN');
+}
 
-      // Attempt backend WebSocket connection
-      connectWebSocket(activeAuctionId);
-    }
+function formatTimer(seconds) {
+  if (!seconds || seconds <= 0) return 'Ended';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
 
-    window.addEventListener('DOMContentLoaded', initSeed);
-  </script>
+function formatTimerLong(seconds) {
+  if (!seconds || seconds <= 0) return 'Ended';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function hashStr(str) {
+  let hash = 0;
+  for (let i = 0; i < (str||'').length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash;
+}
+</script>
 </body>
 </html>
